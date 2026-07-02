@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIBE PLAYER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --void:#0A0A0D;
+    --glass: rgba(18,18,24,0.55);
+    --glass-strong: rgba(18,18,24,0.78);
+    --glass-border: rgba(255,255,255,0.09);
+    --accent: #FF3D7F;
+    --accent-2: #29F6C7;
+    --text: #F5F5F6;
+    --text-muted: #9C9CA8;
+    --text-dim: #6A6A75;
+    --radius: 16px;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Space Grotesk', sans-serif;
+    background:var(--void);
+    color:var(--text);
+    overflow:hidden;
+    height:100vh;
+    width:100%;
+  }
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+  input{font-family:inherit;}
+  ::selection{background:var(--accent); color:#000;}
+
+  :focus-visible{outline:2px solid var(--accent-2); outline-offset:2px;}
+
+  #app{position:relative; height:100vh; width:100%; overflow:hidden;}
+
+  /* ---------- Background layer ---------- */
+  #bgLayer{position:absolute; inset:0; z-index:0; background:var(--void);}
+  #bgVideo{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; opacity:0; transition:opacity .6s ease;
+  }
+  #bgVideo.active{opacity:1;}
+  #bgFallback{
+    position:absolute; inset:0; width:100%; height:100%;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,61,127,0.25), transparent 55%),
+      radial-gradient(circle at 80% 70%, rgba(41,246,199,0.18), transparent 55%),
+      linear-gradient(160deg, #0A0A0D, #131318 60%, #0A0A0D);
+    background-size:180% 180%, 180% 180%, 100% 100%;
+    animation:driftBg 18s ease-in-out infinite;
+    opacity:1; transition:opacity .6s ease;
+  }
+  #bgFallback.hidden{opacity:0;}
+  @keyframes driftBg{
+    0%{background-position:20% 30%, 80% 70%, 0 0;}
+    50%{background-position:60% 60%, 30% 40%, 0 0;}
+    100%{background-position:20% 30%, 80% 70%, 0 0;}
+  }
+  #scrim{
+    position:absolute; inset:0; z-index:1;
+    background:
+      linear-gradient(180deg, rgba(6,6,8,0.75) 0%, rgba(6,6,8,0.15) 28%, rgba(6,6,8,0.15) 60%, rgba(6,6,8,0.92) 100%);
+  }
+  #grain{
+    position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- Top info ---------- */
+  #topBar{
+    position:absolute; top:0; left:0; right:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:28px 28px 0 32px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.22em;
+    color:var(--accent-2); text-transform:uppercase; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--accent-2); box-shadow:0 0 8px var(--accent-2);}
+  .eyebrow .dot.playing{animation:pulseDot 1.4s ease-in-out infinite;}
+  @media (prefers-reduced-motion: no-preference){
+    @keyframes pulseDot{0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.35; transform:scale(.7);}}
+  }
+  #trackTitle{
+    font-size:clamp(24px, 4vw, 44px); font-weight:700; letter-spacing:-0.02em;
+    margin-top:8px; max-width:60vw; line-height:1.1;
+    text-shadow:0 2px 24px rgba(0,0,0,.5);
+  }
+  #trackMeta{margin-top:6px; color:var(--text-muted); font-size:13px;}
+
+  .iconBtn{
+    width:44px; height:44px; border-radius:12px;
+    background:var(--glass); border:1px solid var(--glass-border);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text); transition:background .15s, transform .1s, border-color .15s;
+  }
+  .iconBtn:hover{background:var(--glass-strong); border-color:rgba(255,255,255,.18);}
+  .iconBtn:active{transform:scale(.94);}
+  .iconBtn svg{width:19px; height:19px; stroke-width:2;}
+  .iconBtn.on{color:var(--accent-2); border-color:rgba(41,246,199,.4);}
+
+  #topRight{display:flex; gap:10px;}
+
+  /* ---------- Empty state ---------- */
+  #emptyState{
+    position:absolute; inset:0; z-index:6;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:18px; padding:24px;
+  }
+  #emptyState.hidden{display:none;}
+  #emptyState .ring{
+    width:84px; height:84px; border-radius:50%;
+    border:1.5px dashed rgba(255,255,255,.25);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--accent);
+  }
+  #emptyState .ring svg{width:30px; height:30px;}
+  #emptyState h1{font-size:22px; font-weight:600; letter-spacing:-.01em;}
+  #emptyState p{color:var(--text-muted); font-size:14px; max-width:340px; line-height:1.6;}
+  .primaryBtn{
+    margin-top:6px; padding:13px 26px; border-radius:100px;
+    background:var(--accent); color:#0A0A0D; font-weight:600; font-size:14px;
+    display:inline-flex; align-items:center; gap:8px;
+    transition:transform .12s, box-shadow .2s; box-shadow:0 0 0 rgba(255,61,127,0);
+  }
+  .primaryBtn:hover{box-shadow:0 6px 24px rgba(255,61,127,.35); transform:translateY(-1px);}
+  .primaryBtn svg{width:16px; height:16px; stroke-width:2.4;}
+  .hint{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-dim); letter-spacing:.05em;}
+
+  /* ---------- Playlist drawer ---------- */
+  #playlistPanel{
+    position:absolute; top:0; right:0; bottom:0; z-index:10;
+    width:360px; max-width:88vw;
+    background:var(--glass-strong); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+    border-left:1px solid var(--glass-border);
+    transform:translateX(100%); transition:transform .32s cubic-bezier(.22,.9,.35,1);
+    display:flex; flex-direction:column;
+  }
+  #playlistPanel.open{transform:translateX(0);}
+  .panelHeader{
+    padding:24px 20px 16px; display:flex; justify-content:space-between; align-items:center;
+    border-bottom:1px solid var(--glass-border);
+  }
+  .panelHeader h2{font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:var(--text-muted); font-weight:600;}
+  #trackCount{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--accent-2);}
+  #trackList{list-style:none; overflow-y:auto; flex:1; padding:8px 10px;}
+  #trackList::-webkit-scrollbar{width:6px;}
+  #trackList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12); border-radius:10px;}
+
+  .trackRow{
+    display:flex; align-items:center; gap:12px;
+    padding:9px 10px; border-radius:12px; margin-bottom:2px;
+    cursor:pointer; transition:background .15s;
+    border:1px solid transparent;
+  }
+  .trackRow:hover{background:rgba(255,255,255,.05);}
+  .trackRow.active{background:rgba(255,61,127,.12); border-color:rgba(255,61,127,.3);}
+  .thumb{
+    width:44px; height:44px; border-radius:9px; flex-shrink:0; overflow:hidden;
+    background:linear-gradient(145deg, #1a1a22, #0f0f14);
+    display:flex; align-items:center; justify-content:center; color:var(--text-dim);
+    position:relative;
+  }
+  .thumb video{width:100%; height:100%; object-fit:cover;}
+  .thumb svg{width:16px; height:16px;}
+  .trackInfo{flex:1; min-width:0;}
+  .trackInfo .name{font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .trackInfo .sub{font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-dim); margin-top:2px; display:flex; align-items:center; gap:5px;}
+  .trackInfo .sub .vidTag{color:var(--accent-2);}
+  .rowActions{display:flex; gap:4px; opacity:0; transition:opacity .15s;}
+  .trackRow:hover .rowActions{opacity:1;}
+  .rowBtn{
+    width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    color:var(--text-muted); transition:background .15s, color .15s;
+  }
+  .rowBtn:hover{background:rgba(255,255,255,.1); color:var(--text);}
+  .rowBtn.danger:hover{color:#FF3D7F;}
+  .rowBtn svg{width:14px; height:14px;}
+
+  .panelFooter{padding:14px 16px; border-top:1px solid var(--glass-border);}
+  .importBtn{
+    width:100%; padding:12px; border-radius:12px; border:1px dashed rgba(255,255,255,.2);
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-size:12px; color:var(--text-muted); transition:border-color .15s, color .15s;
+  }
+  .importBtn:hover{border-color:var(--accent-2); color:var(--accent-2);}
+  .importBtn svg{width:14px; height:14px;}
+
+  /* ---------- Control bar ---------- */
+  #controlBar{
+    position:absolute; left:50%; bottom:24px; transform:translateX(-50%); z-index:8;
+    width:min(680px, 92vw);
+    background:var(--glass); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+    border:1px solid var(--glass-border); border-radius:20px;
+    padding:14px 20px 16px;
+  }
+  #controlBar.disabled{opacity:.35; pointer-events:none;}
+
+  .timelineRow{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .timecode{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--text-muted); width:64px; flex-shrink:0;}
+  .timecode.end{text-align:right;}
+  .seekWrap{flex:1; position:relative; height:20px; display:flex; align-items:center;}
+  #seek{
+    -webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:4px;
+    background:linear-gradient(to right, var(--accent) var(--pct,0%), rgba(255,255,255,.14) var(--pct,0%));
+    outline:none; cursor:pointer; position:relative; z-index:2;
+  }
+  #seek::-webkit-slider-thumb{
+    -webkit-appearance:none; width:13px; height:13px; border-radius:50%;
+    background:var(--accent-2); box-shadow:0 0 10px rgba(41,246,199,.7); cursor:pointer;
+    margin-top:0;
+  }
+  #seek::-moz-range-thumb{
+    width:13px; height:13px; border-radius:50%; border:none;
+    background:var(--accent-2); box-shadow:0 0 10px rgba(41,246,199,.7); cursor:pointer;
+  }
+  .ticks{
+    position:absolute; left:0; right:0; top:9px; height:6px; z-index:1; pointer-events:none;
+    background-image:repeating-linear-gradient(to right, rgba(255,255,255,.16) 0 1px, transparent 1px 24px);
+    opacity:.6;
+  }
+
+  .buttonsRow{display:flex; align-items:center; justify-content:space-between;}
+  .btnGroupLeft, .btnGroupRight{display:flex; align-items:center; gap:6px; width:118px;}
+  .btnGroupRight{justify-content:flex-end;}
+  .transportGroup{display:flex; align-items:center; gap:16px;}
+  .transportBtn{
+    display:flex; align-items:center; justify-content:center; color:var(--text);
+    transition:transform .1s, color .15s;
+  }
+  .transportBtn:hover{color:var(--accent-2);}
+  .transportBtn:active{transform:scale(.9);}
+  .transportBtn svg{width:20px; height:20px;}
+  #playBtn{
+    width:52px; height:52px; border-radius:50%;
+    background:linear-gradient(145deg, var(--accent), #c92a63);
+    display:flex; align-items:center; justify-content:center; color:#0A0A0D;
+    box-shadow:0 4px 20px rgba(255,61,127,.4);
+  }
+  #playBtn svg{width:20px; height:20px;}
+  #playBtn.playing{animation:none;}
+  @media (prefers-reduced-motion: no-preference){
+    #playBtn.playing{animation:breathe 2.4s ease-in-out infinite;}
+    @keyframes breathe{0%,100%{box-shadow:0 4px 20px rgba(255,61,127,.4);} 50%{box-shadow:0 4px 30px rgba(255,61,127,.7);}}
+  }
+
+  .volGroup{display:flex; align-items:center; gap:6px;}
+  #volSlider{
+    -webkit-appearance:none; appearance:none; width:70px; height:3px; border-radius:4px;
+    background:linear-gradient(to right, var(--text-muted) var(--vpct,70%), rgba(255,255,255,.14) var(--vpct,70%));
+    outline:none; cursor:pointer;
+  }
+  #volSlider::-webkit-slider-thumb{
+    -webkit-appearance:none; width:10px; height:10px; border-radius:50%; background:var(--text); cursor:pointer;
+  }
+
+  .repeatBadge{position:relative;}
+  .repeatBadge::after{
+    content:''; position:absolute; top:-2px; right:-2px; width:6px; height:6px; border-radius:50%;
+    background:var(--accent-2); box-shadow:0 0 6px var(--accent-2); display:none;
+  }
+  .repeatBadge.one::after{display:block;}
+
+  #videoInputHidden, #audioInputHidden, #rowVideoInputHidden{display:none;}
+
+  @media (max-width:640px){
+    #topBar{padding:20px 16px 0;}
+    #trackTitle{max-width:75vw;}
+    #playlistPanel{width:100vw; max-width:100vw;}
+    #controlBar{width:94vw; bottom:14px; padding:12px 14px 14px;}
+    .btnGroupLeft, .btnGroupRight{width:auto;}
+    .volGroup{display:none;}
+    .transportGroup{gap:14px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="bgLayer">
+    <div id="bgFallback"></div>
+    <video id="bgVideo" muted loop playsinline></video>
+  </div>
+  <div id="scrim"></div>
+  <div id="grain"></div>
+
+  <div id="topBar">
+    <div>
+      <div class="eyebrow"><span class="dot" id="statusDot"></span><span id="statusText">SIAP</span></div>
+      <div id="trackTitle">Belum ada lagu</div>
+      <div id="trackMeta">Import audio buat mulai vibe-nya</div>
+    </div>
+    <div id="topRight">
+      <button class="iconBtn" id="playlistToggle" aria-label="Buka playlist">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="emptyState">
+    <div class="ring">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+    </div>
+    <h1>Vibe Player</h1>
+    <p>Import file .flac atau .wav buat mulai. Tiap lagu bisa lo kasih background video sendiri-sendiri, lengkap sama timeline frame-accurate ala editor.</p>
+    <button class="primaryBtn" id="emptyImportBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      Import Audio
+    </button>
+    <p class="hint">.FLAC · .WAV — bisa pilih banyak file sekaligus</p>
+  </div>
+
+  <aside id="playlistPanel">
+    <div class="panelHeader">
+      <h2>Library</h2>
+      <span id="trackCount">0 TRACK</span>
+    </div>
+    <ul id="trackList"></ul>
+    <div class="panelFooter">
+      <button class="importBtn" id="panelImportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Tambah Audio (.flac / .wav)
+      </button>
+    </div>
+  </aside>
+
+  <div id="controlBar" class="disabled">
+    <div class="timelineRow">
+      <span class="timecode" id="timeCurrent">00:00:00</span>
+      <div class="seekWrap">
+        <div class="ticks"></div>
+        <input type="range" id="seek" min="0" max="100" value="0" step="0.1">
+      </div>
+      <span class="timecode end" id="timeTotal">00:00:00</span>
+    </div>
+    <div class="buttonsRow">
+      <div class="btnGroupLeft">
+        <button class="transportBtn" id="shuffleBtn" aria-label="Shuffle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+        </button>
+        <button class="transportBtn repeatBadge" id="repeatBtn" aria-label="Repeat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        </button>
+      </div>
+      <div class="transportGroup">
+        <button class="transportBtn" id="prevBtn" aria-label="Sebelumnya">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"></polygon><rect x="5" y="4" width="2.2" height="16"></rect></svg>
+        </button>
+        <button id="playBtn" aria-label="Play/Pause">
+          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+        </button>
+        <button class="transportBtn" id="nextBtn" aria-label="Berikutnya">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"></polygon><rect x="16.8" y="4" width="2.2" height="16"></rect></svg>
+        </button>
+      </div>
+      <div class="btnGroupRight">
+        <div class="volGroup">
+          <button class="transportBtn" id="muteBtn" aria-label="Volume">
+            <svg id="volIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          </button>
+          <input type="range" id="volSlider" min="0" max="100" value="80">
+        </div>
+        <button class="iconBtn" id="videoAssignBtn" style="width:38px;height:38px;" aria-label="Ganti video background">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="audioInputHidden" accept=".flac,.wav,audio/flac,audio/x-flac,audio/wav,audio/x-wav" multiple>
+  <input type="file" id="videoInputHidden" accept="video/*">
+  <audio id="audioEl" preload="metadata"></audio>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- State ----------
+  let tracks = [];        // {id, name, audioFile, audioURL, videoFile, videoURL}
+  let currentIndex = -1;
+  let isPlaying = false;
+  let isShuffle = false;
+  let repeatMode = 'off'; // off | all | one
+  let isMuted = false;
+  let lastVolume = 0.8;
+  let pendingVideoAssignIndex = null; // when set via row button
+  const FPS = 24;
+
+  // ---------- DOM refs ----------
+  const audioEl = document.getElementById('audioEl');
+  const bgVideo = document.getElementById('bgVideo');
+  const bgFallback = document.getElementById('bgFallback');
+  const emptyState = document.getElementById('emptyState');
+  const trackTitleEl = document.getElementById('trackTitle');
+  const trackMetaEl = document.getElementById('trackMeta');
+  const statusText = document.getElementById('statusText');
+  const statusDot = document.getElementById('statusDot');
+  const trackListEl = document.getElementById('trackList');
+  const trackCountEl = document.getElementById('trackCount');
+  const playlistPanel = document.getElementById('playlistPanel');
+  const controlBar = document.getElementById('controlBar');
+  const seek = document.getElementById('seek');
+  const timeCurrent = document.getElementById('timeCurrent');
+  const timeTotal = document.getElementById('timeTotal');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const volSlider = document.getElementById('volSlider');
+  const muteBtn = document.getElementById('muteBtn');
+  const volIcon = document.getElementById('volIcon');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const repeatBtn = document.getElementById('repeatBtn');
+  const audioInputHidden = document.getElementById('audioInputHidden');
+  const videoInputHidden = document.getElementById('videoInputHidden');
+
+  audioEl.volume = lastVolume;
+
+  // ---------- Helpers ----------
+  function uid(){ return 'trk_' + Math.random().toString(36).slice(2,10); }
+
+  function formatTimecode(sec){
+    if(!isFinite(sec) || sec < 0) sec = 0;
+    const m = Math.floor(sec/60);
+    const s = Math.floor(sec%60);
+    const f = Math.floor((sec - Math.floor(sec)) * FPS);
+    return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+':'+String(f).padStart(2,'0');
+  }
+
+  function baseName(name){
+    return name.replace(/\.[^/.]+$/, '');
+  }
+
+  // ---------- Import audio ----------
+  function handleAudioFiles(fileList){
+    const valid = Array.from(fileList).filter(f => /\.(flac|wav)$/i.test(f.name));
+    if(valid.length === 0) return;
+    const wasEmpty = tracks.length === 0;
+    valid.forEach(file => {
+      tracks.push({
+        id: uid(),
+        name: baseName(file.name),
+        ext: file.name.split('.').pop().toUpperCase(),
+        audioFile: file,
+        audioURL: URL.createObjectURL(file),
+        videoFile: null,
+        videoURL: null
+      });
+    });
+    renderTrackList();
+    if(wasEmpty){
+      emptyState.classList.add('hidden');
+      controlBar.classList.remove('disabled');
+      loadTrack(0, false);
+    }
+  }
+
+  audioInputHidden.addEventListener('change', e => { handleAudioFiles(e.target.files); e.target.value=''; });
+  document.getElementById('emptyImportBtn').addEventListener('click', () => audioInputHidden.click());
+  document.getElementById('panelImportBtn').addEventListener('click', () => audioInputHidden.click());
+
+  // drag & drop anywhere
+  ['dragover'].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
+  window.addEventListener('drop', e => {
+    e.preventDefault();
+    if(!e.dataTransfer || !e.dataTransfer.files) return;
+    const files = Array.from(e.dataTransfer.files);
+    const audios = files.filter(f => /\.(flac|wav)$/i.test(f.name));
+    const videos = files.filter(f => f.type.startsWith('video/'));
+    if(audios.length) handleAudioFiles(audios);
+    if(videos.length && currentIndex >= 0) assignVideo(currentIndex, videos[0]);
+  });
+
+  // ---------- Video assignment ----------
+  videoInputHidden.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if(file && pendingVideoAssignIndex !== null){
+      assignVideo(pendingVideoAssignIndex, file);
+    }
+    pendingVideoAssignIndex = null;
+    e.target.value = '';
+  });
+
+  function assignVideo(index, file){
+    const t = tracks[index];
+    if(!t) return;
+    if(t.videoURL) URL.revokeObjectURL(t.videoURL);
+    t.videoFile = file;
+    t.videoURL = URL.createObjectURL(file);
+    renderTrackList();
+    if(index === currentIndex) applyBackground(t);
+  }
+
+  document.getElementById('videoAssignBtn').addEventListener('click', () => {
+    if(currentIndex < 0) return;
+    pendingVideoAssignIndex = currentIndex;
+    videoInputHidden.click();
+  });
+
+  // ---------- Background ----------
+  function applyBackground(track){
+    if(track && track.videoURL){
+      bgVideo.src = track.videoURL;
+      bgVideo.loop = true;
+      bgVideo.load();
+      const playPromise = bgVideo.play();
+      if(playPromise) playPromise.catch(()=>{});
+      bgVideo.classList.add('active');
+      bgFallback.classList.add('hidden');
+    } else {
+      bgVideo.classList.remove('active');
+      bgVideo.removeAttribute('src');
+      bgFallback.classList.remove('hidden');
+    }
+  }
+
+  // ---------- Playlist rendering ----------
+  function renderTrackList(){
+    trackCountEl.textContent = tracks.length + ' TRACK' + (tracks.length===1?'':'S');
+    trackListEl.innerHTML = '';
+    tracks.forEach((t, i) => {
+      const li = document.createElement('li');
+      li.className = 'trackRow' + (i===currentIndex ? ' active' : '');
+      li.innerHTML = `
+        <div class="thumb">${t.videoURL ? `<video muted loop autoplay playsinline src="${t.videoURL}"></video>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`}</div>
+        <div class="trackInfo">
+          <div class="name">${escapeHtml(t.name)}</div>
+          <div class="sub"><span>${t.ext}</span>${t.videoURL ? '<span class="vidTag">● VIDEO BG</span>' : ''}</div>
+        </div>
+        <div class="rowActions">
+          <button class="rowBtn" data-action="video" data-index="${i}" aria-label="Ganti video">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+          </button>
+          <button class="rowBtn danger" data-action="remove" data-index="${i}" aria-label="Hapus">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      `;
+      li.addEventListener('click', (e) => {
+        if(e.target.closest('.rowBtn')) return;
+        loadTrack(i, true);
+      });
+      trackListEl.appendChild(li);
+    });
+
+    trackListEl.querySelectorAll('[data-action="video"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        pendingVideoAssignIndex = parseInt(btn.dataset.index, 10);
+        videoInputHidden.click();
+      });
+    });
+    trackListEl.querySelectorAll('[data-action="remove"]').forEach(btn => {
+      btn.addEventListener('click', () => removeTrack(parseInt(btn.dataset.index, 10)));
+    });
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function removeTrack(index){
+    const t = tracks[index];
+    if(!t) return;
+    if(t.audioURL) URL.revokeObjectURL(t.audioURL);
+    if(t.videoURL) URL.revokeObjectURL(t.videoURL);
+    tracks.splice(index, 1);
+    if(index === currentIndex){
+      audioEl.pause(); audioEl.removeAttribute('src');
+      isPlaying = false; currentIndex = -1;
+      applyBackground(null);
+      updatePlayUI();
+    } else if(index < currentIndex){
+      currentIndex--;
+    }
+    if(tracks.length === 0){
+      emptyState.classList.remove('hidden');
+      controlBar.classList.add('disabled');
+      trackTitleEl.textContent = 'Belum ada lagu';
+      trackMetaEl.textContent = 'Import audio buat mulai vibe-nya';
+      statusText.textContent = 'SIAP';
+      statusDot.classList.remove('playing');
+    }
+    renderTrackList();
+  }
+
+  // ---------- Playback ----------
+  function loadTrack(index, autoplay){
+    if(index < 0 || index >= tracks.length) return;
+    currentIndex = index;
+    const t = tracks[index];
+    audioEl.src = t.audioURL;
+    trackTitleEl.textContent = t.name;
+    trackMetaEl.textContent = t.ext + (t.videoURL ? ' · Video BG aktif' : ' · Belum ada video BG');
+    applyBackground(t);
+    renderTrackList();
+    if(autoplay){
+      audioEl.play().then(()=>{ isPlaying = true; updatePlayUI(); syncBgPlayback(); }).catch(()=>{});
+    } else {
+      isPlaying = false; updatePlayUI();
+    }
+  }
+
+  function syncBgPlayback(){
+    if(isPlaying) bgVideo.play().catch(()=>{});
+    else bgVideo.pause();
+  }
+
+  function updatePlayUI(){
+    if(isPlaying){
+      playIcon.innerHTML = '<rect x="5" y="3" width="5" height="18" rx="1"></rect><rect x="14" y="3" width="5" height="18" rx="1"></rect>';
+      playBtn.classList.add('playing');
+      statusText.textContent = 'NOW PLAYING';
+      statusDot.classList.add('playing');
+    } else {
+      playIcon.innerHTML = '<polygon points="6 3 20 12 6 21 6 3"></polygon>';
+      playBtn.classList.remove('playing');
+      statusText.textContent = tracks.length ? 'PAUSED' : 'SIAP';
+      statusDot.classList.remove('playing');
+    }
+  }
+
+  function playPause(){
+    if(currentIndex === -1){
+      if(tracks.length) loadTrack(0, true);
+      return;
+    }
+    if(isPlaying){ audioEl.pause(); isPlaying = false; }
+    else { audioEl.play().then(()=>{ isPlaying = true; updatePlayUI(); syncBgPlayback(); }).catch(()=>{}); return; }
+    updatePlayUI();
+    syncBgPlayback();
+  }
+
+  function pickNextIndex(fromEnded){
+    if(tracks.length === 0) return -1;
+    if(isShuffle){
+      if(tracks.length === 1) return 0;
+      let r;
+      do { r = Math.floor(Math.random()*tracks.length); } while(r === currentIndex);
+      return r;
+    }
+    let next = currentIndex + 1;
+    if(next >= tracks.length){
+      if(repeatMode === 'all') return 0;
+      if(fromEnded) return -1; // stop
+      return 0;
+    }
+    return next;
+  }
+
+  function nextTrack(fromEnded){
+    const n = pickNextIndex(!!fromEnded);
+    if(n === -1){
+      isPlaying = false; updatePlayUI(); syncBgPlayback();
+      return;
+    }
+    loadTrack(n, true);
+  }
+
+  function prevTrack(){
+    if(tracks.length === 0) return;
+    if(audioEl.currentTime > 3){ audioEl.currentTime = 0; return; }
+    let p = currentIndex - 1;
+    if(p < 0) p = tracks.length - 1;
+    loadTrack(p, true);
+  }
+
+  audioEl.addEventListener('ended', () => {
+    if(repeatMode === 'one'){
+      audioEl.currentTime = 0;
+      audioEl.play();
+      return;
+    }
+    nextTrack(true);
+  });
+
+  audioEl.addEventListener('timeupdate', () => {
+    if(!audioEl.duration) return;
+    const pct = (audioEl.currentTime / audioEl.duration) * 100;
+    seek.value = pct;
+    seek.style.setProperty('--pct', pct + '%');
+    timeCurrent.textContent = formatTimecode(audioEl.currentTime);
+  });
+  audioEl.addEventListener('loadedmetadata', () => {
+    timeTotal.textContent = formatTimecode(audioEl.duration);
+  });
+
+  seek.addEventListener('input', () => {
+    if(!audioEl.duration) return;
+    audioEl.currentTime = (seek.value/100) * audioEl.duration;
+  });
+
+  // ---------- Controls ----------
+  document.getElementById('playBtn').addEventListener('click', playPause);
+  document.getElementById('nextBtn').addEventListener('click', () => nextTrack(false));
+  document.getElementById('prevBtn').addEventListener('click', prevTrack);
+
+  shuffleBtn.addEventListener('click', () => {
+    isShuffle = !isShuffle;
+    shuffleBtn.classList.toggle('on', isShuffle);
+  });
+
+  repeatBtn.addEventListener('click', () => {
+    repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off';
+    repeatBtn.classList.toggle('on', repeatMode !== 'off');
+    repeatBtn.classList.toggle('one', repeatMode === 'one');
+  });
+
+  volSlider.addEventListener('input', () => {
+    const v = volSlider.value/100;
+    audioEl.volume = v;
+    lastVolume = v;
+    isMuted = v === 0;
+    volSlider.style.setProperty('--vpct', volSlider.value + '%');
+    updateVolIcon();
+  });
+
+  muteBtn.addEventListener('click', () => {
+    isMuted = !isMuted;
+    audioEl.volume = isMuted ? 0 : lastVolume;
+    volSlider.value = isMuted ? 0 : lastVolume*100;
+    volSlider.style.setProperty('--vpct', volSlider.value + '%');
+    updateVolIcon();
+  });
+
+  function updateVolIcon(){
+    volIcon.innerHTML = (isMuted || audioEl.volume === 0)
+      ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>'
+      : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>';
+  }
+
+  document.getElementById('playlistToggle').addEventListener('click', () => {
+    playlistPanel.classList.toggle('open');
+  });
+
+  // keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if(tag === 'input') return;
+    if(e.code === 'Space'){ e.preventDefault(); playPause(); }
+    if(e.code === 'ArrowRight'){ audioEl.currentTime = Math.min((audioEl.currentTime||0)+5, audioEl.duration||0); }
+    if(e.code === 'ArrowLeft'){ audioEl.currentTime = Math.max((audioEl.currentTime||0)-5, 0); }
+  });
+
+  // init
+  volSlider.style.setProperty('--vpct', volSlider.value + '%');
+})();
+</script>
+</body>
+</html>
