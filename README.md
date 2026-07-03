@@ -1,7 +1,5 @@
 # 🎧 Vibe Player
 
-![icon](vibe-player.png)
-
 A lightweight desktop music player focused on aesthetics and precision.
 
 ## Features
@@ -13,3 +11,4 @@ A lightweight desktop music player focused on aesthetics and precision.
 - ✨ Modern glassmorphism-inspired UI
 
 Built for people who enjoy both music and design.
+![icon](vibe-player.png)
