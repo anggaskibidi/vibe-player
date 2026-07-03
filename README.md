@@ -1,5 +1,7 @@
 # 🎧 Vibe Player
 
+![icon](vibe-player.png)
+
 A lightweight desktop music player focused on aesthetics and precision.
 
 ## Features
