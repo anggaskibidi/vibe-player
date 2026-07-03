@@ -269,6 +269,59 @@
 
   #videoInputHidden, #audioInputHidden, #rowVideoInputHidden{display:none;}
 
+  .panelHeaderLeft{display:flex; align-items:center; gap:10px;}
+  .iconBtn.small{width:32px; height:32px; border-radius:9px;}
+  .iconBtn.small svg{width:16px; height:16px;}
+
+  /* ---------- Now playing mini card ---------- */
+  #nowPlayingMini{
+    position:absolute; left:24px; bottom:112px; z-index:7;
+    display:flex; align-items:center; gap:10px;
+    background:var(--glass); border:1px solid var(--glass-border);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border-radius:14px; padding:7px 16px 7px 7px;
+    max-width:260px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    transition:opacity .2s ease;
+  }
+  #nowPlayingMini.hidden{display:none;}
+  .npmThumb{
+    width:46px; height:46px; border-radius:9px; overflow:hidden; flex-shrink:0;
+    background:linear-gradient(145deg, #1a1a22, #0f0f14);
+    display:flex; align-items:center; justify-content:center; color:var(--text-dim);
+  }
+  .npmThumb video{width:100%; height:100%; object-fit:cover;}
+  .npmThumb svg{width:17px; height:17px;}
+  .npmInfo{min-width:0;}
+  .npmTitle{font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px;}
+  .npmSub{font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px;}
+
+  /* ---------- Track properties panel ---------- */
+  #infoPanel{
+    position:absolute; right:24px; bottom:112px; z-index:7;
+    width:224px;
+    background:var(--glass); border:1px solid var(--glass-border);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border-radius:14px; padding:12px 14px 14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+  #infoPanel.hidden{display:none;}
+  .infoPanelHeader{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:.14em;
+    color:var(--accent-2); margin-bottom:9px; text-transform:uppercase;
+  }
+  .infoPanelHeader button{color:var(--text-dim); transition:color .15s;}
+  .infoPanelHeader button:hover{color:var(--text);}
+  .infoPanelHeader button svg{width:13px; height:13px;}
+  .infoGrid{display:flex; flex-direction:column; gap:5.5px;}
+  .infoRow{display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:11px;}
+  .infoLabel{color:var(--text-dim); flex-shrink:0;}
+  .infoValue{
+    font-family:'JetBrains Mono', monospace; color:var(--text); text-align:right;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:132px;
+  }
+
   @media (max-width:640px){
     #topBar{padding:20px 16px 0;}
     #trackTitle{max-width:75vw;}
@@ -277,6 +330,9 @@
     .btnGroupLeft, .btnGroupRight{width:auto;}
     .volGroup{display:none;}
     .transportGroup{gap:14px;}
+    #nowPlayingMini{left:12px; bottom:98px; max-width:56vw; padding:6px 12px 6px 6px;}
+    .npmTitle, .npmSub{max-width:34vw;}
+    #infoPanel{right:12px; left:12px; width:auto; bottom:auto; top:76px;}
   }
 </style>
 </head>
@@ -318,7 +374,12 @@
 
   <aside id="playlistPanel">
     <div class="panelHeader">
-      <h2>Library</h2>
+      <div class="panelHeaderLeft">
+        <button class="iconBtn small" id="panelCloseBtn" aria-label="Tutup playlist">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </button>
+        <h2>Library</h2>
+      </div>
       <span id="trackCount">0 TRACK</span>
     </div>
     <ul id="trackList"></ul>
@@ -369,9 +430,42 @@
         <button class="iconBtn" id="videoAssignBtn" style="width:38px;height:38px;" aria-label="Ganti video background">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
         </button>
+        <button class="iconBtn" id="infoToggleBtn" style="width:38px;height:38px;" aria-label="Info lagu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </button>
       </div>
     </div>
   </div>
+
+  <div id="nowPlayingMini" class="hidden">
+    <div class="npmThumb" id="npmThumb">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+    </div>
+    <div class="npmInfo">
+      <div class="npmTitle" id="npmTitle">-</div>
+      <div class="npmSub" id="npmSub">-</div>
+    </div>
+  </div>
+
+  <aside id="infoPanel" class="hidden">
+    <div class="infoPanelHeader">
+      <span>Properties</span>
+      <button id="infoCloseBtn" aria-label="Tutup info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="infoGrid">
+      <div class="infoRow"><span class="infoLabel">Title</span><span class="infoValue" id="infoTitle">-</span></div>
+      <div class="infoRow"><span class="infoLabel">Artist</span><span class="infoValue" id="infoArtist">-</span></div>
+      <div class="infoRow"><span class="infoLabel">Album</span><span class="infoValue" id="infoAlbum">-</span></div>
+      <div class="infoRow"><span class="infoLabel">Length</span><span class="infoValue" id="infoLength">-</span></div>
+      <div class="infoRow"><span class="infoLabel">File Size</span><span class="infoValue" id="infoSize">-</span></div>
+      <div class="infoRow"><span class="infoLabel">Bitrate</span><span class="infoValue" id="infoBitrate">-</span></div>
+      <div class="infoRow"><span class="infoLabel">Sample Rate</span><span class="infoValue" id="infoSampleRate">-</span></div>
+      <div class="infoRow"><span class="infoLabel">Sample Size</span><span class="infoValue" id="infoSampleSize">-</span></div>
+      <div class="infoRow"><span class="infoLabel">Channels</span><span class="infoValue" id="infoChannels">-</span></div>
+    </div>
+  </aside>
 
   <input type="file" id="audioInputHidden" accept=".flac,.wav,audio/flac,audio/x-flac,audio/wav,audio/x-wav" multiple>
   <input type="file" id="videoInputHidden" accept="video/*">
@@ -418,6 +512,20 @@
   const repeatBtn = document.getElementById('repeatBtn');
   const audioInputHidden = document.getElementById('audioInputHidden');
   const videoInputHidden = document.getElementById('videoInputHidden');
+  const nowPlayingMini = document.getElementById('nowPlayingMini');
+  const npmThumb = document.getElementById('npmThumb');
+  const npmTitle = document.getElementById('npmTitle');
+  const npmSub = document.getElementById('npmSub');
+  const infoPanel = document.getElementById('infoPanel');
+  const infoTitle = document.getElementById('infoTitle');
+  const infoArtist = document.getElementById('infoArtist');
+  const infoAlbum = document.getElementById('infoAlbum');
+  const infoLength = document.getElementById('infoLength');
+  const infoSize = document.getElementById('infoSize');
+  const infoBitrate = document.getElementById('infoBitrate');
+  const infoSampleRate = document.getElementById('infoSampleRate');
+  const infoSampleSize = document.getElementById('infoSampleSize');
+  const infoChannels = document.getElementById('infoChannels');
 
   audioEl.volume = lastVolume;
 
@@ -434,6 +542,134 @@
 
   function baseName(name){
     return name.replace(/\.[^/.]+$/, '');
+  }
+
+  function formatDuration(sec){
+    if(!isFinite(sec) || sec < 0) sec = 0;
+    const m = Math.floor(sec/60);
+    const s = Math.floor(sec%60);
+    return m + ':' + String(s).padStart(2,'0');
+  }
+
+  function humanFileSize(bytes){
+    if(!bytes && bytes !== 0) return '—';
+    if(bytes < 1024) return bytes + ' B';
+    const units = ['KB','MB','GB'];
+    let i = -1, val = bytes;
+    do { val /= 1024; i++; } while(val >= 1024 && i < units.length - 1);
+    return val.toFixed(val < 10 ? 2 : 1) + ' ' + units[i];
+  }
+
+  function channelsLabel(n){
+    if(n === 1) return '1 (Mono)';
+    if(n === 2) return '2 (Stereo)';
+    if(n === 6) return '6 (5.1)';
+    if(n === 8) return '8 (7.1)';
+    return n + ' Channels';
+  }
+
+  // ---------- Audio metadata parsing (WAV / FLAC headers) ----------
+  async function parseWav(file){
+    const result = {channels:null, sampleRate:null, bitDepth:null, bitrateKbps:null, title:null, artist:null, album:null};
+    const buf = await file.slice(0, Math.min(file.size, 5*1024*1024)).arrayBuffer();
+    const view = new DataView(buf);
+    if(view.byteLength < 12) return result;
+    const riff = String.fromCharCode(view.getUint8(0),view.getUint8(1),view.getUint8(2),view.getUint8(3));
+    if(riff !== 'RIFF') return result;
+    let offset = 12;
+    while(offset + 8 <= view.byteLength){
+      const chunkId = String.fromCharCode(view.getUint8(offset),view.getUint8(offset+1),view.getUint8(offset+2),view.getUint8(offset+3));
+      const chunkSize = view.getUint32(offset+4, true);
+      const dataStart = offset + 8;
+      if(chunkId === 'fmt ' && dataStart+16 <= view.byteLength){
+        result.channels = view.getUint16(dataStart+2, true);
+        result.sampleRate = view.getUint32(dataStart+4, true);
+        const byteRate = view.getUint32(dataStart+8, true);
+        result.bitDepth = view.getUint16(dataStart+14, true);
+        result.bitrateKbps = Math.round(byteRate*8/1000);
+      } else if(chunkId === 'LIST' && dataStart+4 <= view.byteLength){
+        const listType = String.fromCharCode(view.getUint8(dataStart),view.getUint8(dataStart+1),view.getUint8(dataStart+2),view.getUint8(dataStart+3));
+        if(listType === 'INFO'){
+          let subOffset = dataStart + 4;
+          const listEnd = Math.min(dataStart + chunkSize, view.byteLength);
+          while(subOffset + 8 <= listEnd){
+            const subId = String.fromCharCode(view.getUint8(subOffset),view.getUint8(subOffset+1),view.getUint8(subOffset+2),view.getUint8(subOffset+3));
+            const subSize = view.getUint32(subOffset+4, true);
+            const strStart = subOffset + 8;
+            if(strStart + subSize <= view.byteLength){
+              const strBytes = new Uint8Array(buf, strStart, subSize);
+              const str = new TextDecoder('utf-8').decode(strBytes).replace(/\0+$/,'').trim();
+              if(subId === 'INAM') result.title = str;
+              if(subId === 'IART') result.artist = str;
+              if(subId === 'IPRD') result.album = str;
+            }
+            subOffset += 8 + subSize + (subSize % 2);
+          }
+        }
+      }
+      offset = dataStart + chunkSize + (chunkSize % 2);
+    }
+    return result;
+  }
+
+  async function parseFlac(file){
+    const result = {channels:null, sampleRate:null, bitDepth:null, bitrateKbps:null, title:null, artist:null, album:null};
+    const buf = await file.slice(0, Math.min(file.size, 2*1024*1024)).arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    const view = new DataView(buf);
+    if(bytes.length < 4 || String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3]) !== 'fLaC') return result;
+    let offset = 4;
+    let isLast = false;
+    while(!isLast && offset + 4 <= bytes.length){
+      const headerByte = bytes[offset];
+      isLast = (headerByte & 0x80) !== 0;
+      const blockType = headerByte & 0x7F;
+      const blockLength = (bytes[offset+1]<<16) | (bytes[offset+2]<<8) | bytes[offset+3];
+      const blockStart = offset + 4;
+      if(blockStart + blockLength > bytes.length) break;
+
+      if(blockType === 0 && blockLength >= 18){ // STREAMINFO
+        const b = bytes.subarray(blockStart, blockStart + 34);
+        let bitPos = 10 * 8;
+        const readBits = (nbits) => {
+          let value = 0;
+          for(let i=0;i<nbits;i++){
+            const byteIndex = bitPos >> 3;
+            const bitIndex = 7 - (bitPos % 8);
+            value = value*2 + ((b[byteIndex] >> bitIndex) & 1);
+            bitPos++;
+          }
+          return value;
+        };
+        result.sampleRate = readBits(20);
+        result.channels = readBits(3) + 1;
+        result.bitDepth = readBits(5) + 1;
+      } else if(blockType === 4){ // VORBIS_COMMENT
+        let p = blockStart;
+        if(p+4 <= bytes.length){
+          const vendorLen = view.getUint32(p, true); p += 4 + vendorLen;
+          if(p+4 <= bytes.length){
+            const commentCount = view.getUint32(p, true); p += 4;
+            for(let c=0; c<commentCount && p+4<=bytes.length; c++){
+              const cLen = view.getUint32(p, true); p += 4;
+              if(p+cLen > bytes.length) break;
+              const str = new TextDecoder('utf-8').decode(bytes.subarray(p, p+cLen));
+              p += cLen;
+              const eq = str.indexOf('=');
+              if(eq > -1){
+                const key = str.slice(0, eq).toUpperCase();
+                const val = str.slice(eq+1);
+                if(key === 'TITLE') result.title = val;
+                else if(key === 'ARTIST') result.artist = val;
+                else if(key === 'ALBUM') result.album = val;
+              }
+            }
+          }
+        }
+      }
+      offset = blockStart + blockLength;
+    }
+    return result;
   }
 
   // ---------- Import audio ----------
@@ -493,7 +729,11 @@
     t.videoFile = file;
     t.videoURL = URL.createObjectURL(file);
     renderTrackList();
-    if(index === currentIndex) applyBackground(t);
+    if(index === currentIndex){
+      applyBackground(t);
+      trackMetaEl.textContent = t.ext + ' · Video BG aktif';
+      updateNowPlayingMini(t);
+    }
   }
 
   document.getElementById('videoAssignBtn').addEventListener('click', () => {
@@ -508,10 +748,14 @@
       bgVideo.src = track.videoURL;
       bgVideo.loop = true;
       bgVideo.load();
-      const playPromise = bgVideo.play();
-      if(playPromise) playPromise.catch(()=>{});
       bgVideo.classList.add('active');
       bgFallback.classList.add('hidden');
+      // match whatever the audio is actually doing right now (handles
+      // assigning/replacing a video mid-playback, not just on track load)
+      if(!audioEl.paused){
+        const p = bgVideo.play();
+        if(p) p.catch(()=>{});
+      }
     } else {
       bgVideo.classList.remove('active');
       bgVideo.removeAttribute('src');
@@ -565,6 +809,57 @@
     return d.innerHTML;
   }
 
+  // ---------- Now playing mini card ----------
+  function updateNowPlayingMini(track){
+    nowPlayingMini.classList.remove('hidden');
+    npmTitle.textContent = track.name;
+    npmSub.textContent = track.ext + (track.videoURL ? ' · Video BG' : '');
+    npmThumb.innerHTML = track.videoURL
+      ? `<video muted loop autoplay playsinline src="${track.videoURL}"></video>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
+  }
+
+  // ---------- Track properties panel ----------
+  function applyMeta(track, meta){
+    if(tracks[currentIndex] !== track) return;
+    infoTitle.textContent = meta.title || track.name;
+    infoArtist.textContent = meta.artist || '—';
+    infoAlbum.textContent = meta.album || '—';
+    infoChannels.textContent = meta.channels ? channelsLabel(meta.channels) : '—';
+    infoSampleSize.textContent = meta.bitDepth ? meta.bitDepth + '-bit' : '—';
+    infoSampleRate.textContent = meta.sampleRate ? (meta.sampleRate/1000).toFixed(1).replace(/\.0$/,'') + ' kHz' : '—';
+    let bitrate = meta.bitrateKbps;
+    if(!bitrate && audioEl.duration && isFinite(audioEl.duration) && track.audioFile){
+      bitrate = Math.round((track.audioFile.size*8)/audioEl.duration/1000);
+    }
+    infoBitrate.textContent = bitrate ? bitrate + ' kbps' : '—';
+  }
+
+  async function updateInfoPanel(track){
+    infoPanel.classList.remove('hidden');
+    infoTitle.textContent = track.name;
+    infoArtist.textContent = '—';
+    infoAlbum.textContent = '—';
+    infoSize.textContent = humanFileSize(track.audioFile.size);
+    infoLength.textContent = (audioEl.duration && isFinite(audioEl.duration) && tracks[currentIndex] === track) ? formatDuration(audioEl.duration) : '—';
+    infoBitrate.textContent = '…';
+    infoSampleRate.textContent = '…';
+    infoSampleSize.textContent = '…';
+    infoChannels.textContent = '…';
+
+    if(track.meta){ applyMeta(track, track.meta); return; }
+    try{
+      const meta = track.ext.toLowerCase() === 'flac' ? await parseFlac(track.audioFile) : await parseWav(track.audioFile);
+      track.meta = meta;
+      applyMeta(track, meta);
+    }catch(err){
+      if(tracks[currentIndex] === track){
+        infoBitrate.textContent = '—'; infoSampleRate.textContent = '—';
+        infoSampleSize.textContent = '—'; infoChannels.textContent = '—';
+      }
+    }
+  }
+
   function removeTrack(index){
     const t = tracks[index];
     if(!t) return;
@@ -586,6 +881,8 @@
       trackMetaEl.textContent = 'Import audio buat mulai vibe-nya';
       statusText.textContent = 'SIAP';
       statusDot.classList.remove('playing');
+      nowPlayingMini.classList.add('hidden');
+      infoPanel.classList.add('hidden');
     }
     renderTrackList();
   }
@@ -600,19 +897,20 @@
     trackMetaEl.textContent = t.ext + (t.videoURL ? ' · Video BG aktif' : ' · Belum ada video BG');
     applyBackground(t);
     renderTrackList();
+    updateNowPlayingMini(t);
+    updateInfoPanel(t);
     if(autoplay){
-      audioEl.play().then(()=>{ isPlaying = true; updatePlayUI(); syncBgPlayback(); }).catch(()=>{});
+      audioEl.play().catch(()=>{});
     } else {
-      isPlaying = false; updatePlayUI();
+      updatePlayUI();
     }
   }
 
-  function syncBgPlayback(){
-    if(isPlaying) bgVideo.play().catch(()=>{});
-    else bgVideo.pause();
-  }
-
+  // Video always mirrors the audio element's actual play state — driven by
+  // native 'play'/'pause' events below, so it stays correct no matter what
+  // triggers the state change (buttons, keyboard, media keys, etc).
   function updatePlayUI(){
+    isPlaying = !audioEl.paused && !audioEl.ended && currentIndex !== -1;
     if(isPlaying){
       playIcon.innerHTML = '<rect x="5" y="3" width="5" height="18" rx="1"></rect><rect x="14" y="3" width="5" height="18" rx="1"></rect>';
       playBtn.classList.add('playing');
@@ -626,15 +924,22 @@
     }
   }
 
+  // Reposition the bg video proportionally to where the song is, based on
+  // the VIDEO's own duration (so a video shorter or longer than the song
+  // still lines up sensibly instead of just mirroring raw seconds).
+  function syncVideoPositionToAudio(){
+    if(!bgVideo.duration || !isFinite(bgVideo.duration) || !audioEl.duration) return;
+    const ratio = audioEl.currentTime / audioEl.duration;
+    bgVideo.currentTime = ratio * bgVideo.duration;
+  }
+
   function playPause(){
     if(currentIndex === -1){
       if(tracks.length) loadTrack(0, true);
       return;
     }
-    if(isPlaying){ audioEl.pause(); isPlaying = false; }
-    else { audioEl.play().then(()=>{ isPlaying = true; updatePlayUI(); syncBgPlayback(); }).catch(()=>{}); return; }
-    updatePlayUI();
-    syncBgPlayback();
+    if(audioEl.paused) audioEl.play().catch(()=>{});
+    else audioEl.pause();
   }
 
   function pickNextIndex(fromEnded){
@@ -657,7 +962,9 @@
   function nextTrack(fromEnded){
     const n = pickNextIndex(!!fromEnded);
     if(n === -1){
-      isPlaying = false; updatePlayUI(); syncBgPlayback();
+      audioEl.pause();
+      bgVideo.currentTime = 0;
+      updatePlayUI();
       return;
     }
     loadTrack(n, true);
@@ -671,10 +978,19 @@
     loadTrack(p, true);
   }
 
+  // Audio is the single source of truth for play state — video just follows.
+  audioEl.addEventListener('play', () => { bgVideo.play().catch(()=>{}); updatePlayUI(); });
+  audioEl.addEventListener('pause', () => { bgVideo.pause(); updatePlayUI(); });
+
+  // Whenever the audio's position jumps (user drag, repeat-one restart,
+  // prev-track restart), reposition the video to match — this is also what
+  // resets a too-long video back to frame 0 when a track loops/restarts.
+  audioEl.addEventListener('seeked', syncVideoPositionToAudio);
+
   audioEl.addEventListener('ended', () => {
     if(repeatMode === 'one'){
       audioEl.currentTime = 0;
-      audioEl.play();
+      audioEl.play().catch(()=>{});
       return;
     }
     nextTrack(true);
@@ -689,11 +1005,17 @@
   });
   audioEl.addEventListener('loadedmetadata', () => {
     timeTotal.textContent = formatTimecode(audioEl.duration);
+    if(currentIndex >= 0){
+      const t = tracks[currentIndex];
+      infoLength.textContent = formatDuration(audioEl.duration);
+      if(t.meta) applyMeta(t, t.meta);
+    }
   });
 
   seek.addEventListener('input', () => {
     if(!audioEl.duration) return;
     audioEl.currentTime = (seek.value/100) * audioEl.duration;
+    syncVideoPositionToAudio();
   });
 
   // ---------- Controls ----------
@@ -737,6 +1059,15 @@
 
   document.getElementById('playlistToggle').addEventListener('click', () => {
     playlistPanel.classList.toggle('open');
+  });
+  document.getElementById('panelCloseBtn').addEventListener('click', () => {
+    playlistPanel.classList.remove('open');
+  });
+  document.getElementById('infoToggleBtn').addEventListener('click', () => {
+    infoPanel.classList.toggle('hidden');
+  });
+  document.getElementById('infoCloseBtn').addEventListener('click', () => {
+    infoPanel.classList.add('hidden');
   });
 
   // keyboard shortcuts
