@@ -286,10 +286,13 @@
   }
   #nowPlayingMini.hidden{display:none;}
   .npmThumb{
-    width:46px; height:46px; border-radius:9px; overflow:hidden; flex-shrink:0;
+    width:46px; height:46px; border-radius:9px; overflow:visible; flex-shrink:0;
     background:linear-gradient(145deg, #1a1a22, #0f0f14);
     display:flex; align-items:center; justify-content:center; color:var(--text-dim);
+    position:relative;
   }
+  .npmThumb > img, .npmThumb > video, .npmThumb > svg{border-radius:9px; overflow:hidden;}
+  .npmThumb > img, .npmThumb > video{width:100%; height:100%; object-fit:cover; display:block;}
   .npmThumb video{width:100%; height:100%; object-fit:cover;}
   .npmThumb svg{width:17px; height:17px;}
   .npmInfo{min-width:0;}
@@ -322,10 +325,50 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:132px;
   }
 
+  /* ---------- Lyrics drawer (mirrors playlist, opens from the left) ---------- */
+  #lyricsPanel{
+    position:absolute; top:0; left:0; bottom:0; z-index:10;
+    width:400px; max-width:88vw;
+    background:var(--glass-strong); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+    border-right:1px solid var(--glass-border);
+    transform:translateX(-100%); transition:transform .32s cubic-bezier(.22,.9,.35,1);
+    display:flex; flex-direction:column;
+  }
+  #lyricsPanel.open{transform:translateX(0);}
+  #lyricsPanel .panelHeader{justify-content:space-between;}
+  .lyricsBody{
+    flex:1; overflow-y:auto; padding:42vh 30px; scroll-behavior:smooth; text-align:center;
+    -webkit-mask-image:linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
+    mask-image:linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
+  }
+  .lyricsBody::-webkit-scrollbar{width:0;}
+  .lyricsEmpty{color:var(--text-dim); font-size:13px; line-height:1.6;}
+  .lyricsPlain{color:var(--text-muted); font-size:15px; line-height:2; white-space:pre-wrap; text-align:left;}
+  .lyricLine{
+    font-size:16px; font-weight:600; color:var(--text-dim); opacity:.4;
+    padding:11px 0; transform:scale(.92);
+    transition:opacity .4s cubic-bezier(.22,.9,.35,1), color .4s ease, font-size .4s cubic-bezier(.22,.9,.35,1), transform .4s cubic-bezier(.22,.9,.35,1);
+  }
+  .lyricLine.near{opacity:.75; color:var(--text-muted); transform:scale(.96);}
+  .lyricLine.active{
+    color:var(--text); opacity:1; font-size:22px; transform:scale(1);
+    text-shadow:0 2px 24px rgba(255,61,127,.4);
+  }
+
+  /* ---------- Cover art in thumbnails ---------- */
+  .thumb img, .npmThumb img{width:100%; height:100%; object-fit:cover;}
+  .thumbVidBadge{
+    position:absolute; right:-2px; bottom:-2px; width:16px; height:16px; border-radius:50%;
+    background:var(--accent-2); color:#0A0A0D; display:flex; align-items:center; justify-content:center;
+    border:1.5px solid var(--void);
+  }
+  .thumbVidBadge svg{width:9px; height:9px;}
+
   @media (max-width:640px){
     #topBar{padding:20px 16px 0;}
     #trackTitle{max-width:75vw;}
     #playlistPanel{width:100vw; max-width:100vw;}
+    #lyricsPanel{width:100vw; max-width:100vw;}
     #controlBar{width:94vw; bottom:14px; padding:12px 14px 14px;}
     .btnGroupLeft, .btnGroupRight{width:auto;}
     .volGroup{display:none;}
@@ -353,6 +396,9 @@
       <div id="trackMeta">Import audio buat mulai vibe-nya</div>
     </div>
     <div id="topRight">
+      <button class="iconBtn" id="lyricsToggle" aria-label="Buka lirik">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>
+      </button>
       <button class="iconBtn" id="playlistToggle" aria-label="Buka playlist">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
       </button>
@@ -388,6 +434,18 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         Tambah Audio (.flac / .wav)
       </button>
+    </div>
+  </aside>
+
+  <aside id="lyricsPanel">
+    <div class="panelHeader">
+      <h2>Lyrics</h2>
+      <button class="iconBtn small" id="lyricsCloseBtn" aria-label="Tutup lirik">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+    </div>
+    <div id="lyricsBody" class="lyricsBody">
+      <p class="lyricsEmpty">Belum ada lagu yang dipilih.</p>
     </div>
   </aside>
 
@@ -526,6 +584,11 @@
   const infoSampleRate = document.getElementById('infoSampleRate');
   const infoSampleSize = document.getElementById('infoSampleSize');
   const infoChannels = document.getElementById('infoChannels');
+  const lyricsPanel = document.getElementById('lyricsPanel');
+  const lyricsBody = document.getElementById('lyricsBody');
+
+  let lrcData = null;
+  let lastActiveLyricIndex = -1;
 
   audioEl.volume = lastVolume;
 
@@ -568,53 +631,181 @@
     return n + ' Channels';
   }
 
-  // ---------- Audio metadata parsing (WAV / FLAC headers) ----------
-  async function parseWav(file){
-    const result = {channels:null, sampleRate:null, bitDepth:null, bitrateKbps:null, title:null, artist:null, album:null};
-    const buf = await file.slice(0, Math.min(file.size, 5*1024*1024)).arrayBuffer();
-    const view = new DataView(buf);
-    if(view.byteLength < 12) return result;
-    const riff = String.fromCharCode(view.getUint8(0),view.getUint8(1),view.getUint8(2),view.getUint8(3));
-    if(riff !== 'RIFF') return result;
-    let offset = 12;
-    while(offset + 8 <= view.byteLength){
-      const chunkId = String.fromCharCode(view.getUint8(offset),view.getUint8(offset+1),view.getUint8(offset+2),view.getUint8(offset+3));
-      const chunkSize = view.getUint32(offset+4, true);
-      const dataStart = offset + 8;
-      if(chunkId === 'fmt ' && dataStart+16 <= view.byteLength){
-        result.channels = view.getUint16(dataStart+2, true);
-        result.sampleRate = view.getUint32(dataStart+4, true);
-        const byteRate = view.getUint32(dataStart+8, true);
-        result.bitDepth = view.getUint16(dataStart+14, true);
-        result.bitrateKbps = Math.round(byteRate*8/1000);
-      } else if(chunkId === 'LIST' && dataStart+4 <= view.byteLength){
-        const listType = String.fromCharCode(view.getUint8(dataStart),view.getUint8(dataStart+1),view.getUint8(dataStart+2),view.getUint8(dataStart+3));
-        if(listType === 'INFO'){
-          let subOffset = dataStart + 4;
-          const listEnd = Math.min(dataStart + chunkSize, view.byteLength);
-          while(subOffset + 8 <= listEnd){
-            const subId = String.fromCharCode(view.getUint8(subOffset),view.getUint8(subOffset+1),view.getUint8(subOffset+2),view.getUint8(subOffset+3));
-            const subSize = view.getUint32(subOffset+4, true);
-            const strStart = subOffset + 8;
-            if(strStart + subSize <= view.byteLength){
-              const strBytes = new Uint8Array(buf, strStart, subSize);
-              const str = new TextDecoder('utf-8').decode(strBytes).replace(/\0+$/,'').trim();
-              if(subId === 'INAM') result.title = str;
-              if(subId === 'IART') result.artist = str;
-              if(subId === 'IPRD') result.album = str;
-            }
-            subOffset += 8 + subSize + (subSize % 2);
-          }
+  // Parses LRC-style "[mm:ss.xx]lyric text" lines embedded inside a plain
+  // lyrics blob (common even for FLAC/WAV taggers). Falls back gracefully
+  // when the file only has plain, untimed lyrics.
+  function parseLrc(text){
+    const timeTag = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+    const lines = text.split(/\r?\n/);
+    const out = [];
+    for(const line of lines){
+      const matches = [...line.matchAll(timeTag)];
+      if(matches.length === 0) continue;
+      const content = line.replace(timeTag, '').trim();
+      matches.forEach(m => {
+        const min = parseInt(m[1],10);
+        const sec = parseInt(m[2],10);
+        const frac = m[3] ? parseInt(m[3].padEnd(3,'0').slice(0,3),10) : 0;
+        out.push({ time: min*60 + sec + frac/1000, text: content });
+      });
+    }
+    out.sort((a,b)=>a.time-b.time);
+    return { hasTimestamps: out.length > 0, lines: out };
+  }
+
+  // ---------- ID3v2 helpers (used for cover art / lyrics embedded in WAV) ----------
+  function synchsafe(b0,b1,b2,b3){ return ((b0&0x7F)<<21)|((b1&0x7F)<<14)|((b2&0x7F)<<7)|(b3&0x7F); }
+
+  function decodeId3Text(bytes, enc){
+    try{
+      if(enc === 3) return new TextDecoder('utf-8').decode(bytes).replace(/\0+$/,'');
+      if(enc === 1 || enc === 2){
+        let off = 0, variant = 'utf-16be';
+        if(bytes.length>=2 && bytes[0]===0xFF && bytes[1]===0xFE){ variant='utf-16le'; off=2; }
+        else if(bytes.length>=2 && bytes[0]===0xFE && bytes[1]===0xFF){ variant='utf-16be'; off=2; }
+        return new TextDecoder(variant).decode(bytes.subarray(off)).replace(/\0+$/,'');
+      }
+      return new TextDecoder('iso-8859-1').decode(bytes).replace(/\0+$/,'');
+    }catch(e){ return ''; }
+  }
+
+  function id3TextTermLen(enc){ return (enc===1||enc===2) ? 2 : 1; }
+
+  function findId3Terminator(bytes, start, enc){
+    const step = id3TextTermLen(enc);
+    let p = start;
+    if(step === 2){
+      while(p+1 < bytes.length && !(bytes[p]===0 && bytes[p+1]===0)) p += 2;
+    } else {
+      while(p < bytes.length && bytes[p] !== 0) p++;
+    }
+    return Math.min(p + step, bytes.length);
+  }
+
+  function parseId3v2(bytes){
+    const result = {title:null, artist:null, album:null, lyrics:null, pictureBlob:null, pictureMime:null};
+    if(bytes.length < 10) return result;
+    if(!(bytes[0]===0x49 && bytes[1]===0x44 && bytes[2]===0x33)) return result; // "ID3"
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const majorVer = bytes[3];
+    const flags = bytes[5];
+    const tagSize = synchsafe(bytes[6],bytes[7],bytes[8],bytes[9]);
+    let offset = 10;
+    if(flags & 0x40){ // extended header present — skip it
+      const extSize = majorVer>=4 ? synchsafe(bytes[offset],bytes[offset+1],bytes[offset+2],bytes[offset+3]) : view.getUint32(offset,false);
+      offset += extSize;
+    }
+    const end = Math.min(10+tagSize, bytes.length);
+    while(offset+10 <= end){
+      const frameId = String.fromCharCode(bytes[offset],bytes[offset+1],bytes[offset+2],bytes[offset+3]);
+      if(bytes[offset]===0) break;
+      const frameSize = majorVer>=4
+        ? synchsafe(bytes[offset+4],bytes[offset+5],bytes[offset+6],bytes[offset+7])
+        : view.getUint32(offset+4,false);
+      const dataStart = offset+10;
+      if(frameSize<=0 || dataStart+frameSize>end) break;
+      const fb = bytes.subarray(dataStart, dataStart+frameSize);
+
+      if((frameId==='TIT2'||frameId==='TPE1'||frameId==='TALB') && fb.length>1){
+        const text = decodeId3Text(fb.subarray(1), fb[0]);
+        if(frameId==='TIT2') result.title = text;
+        else if(frameId==='TPE1') result.artist = text;
+        else result.album = text;
+      } else if(frameId==='USLT' && fb.length>4){
+        const enc = fb[0];
+        const descEnd = findId3Terminator(fb, 4, enc);
+        result.lyrics = decodeId3Text(fb.subarray(descEnd), enc);
+      } else if(frameId==='APIC' && fb.length>1){
+        const enc = fb[0];
+        let p = 1, mimeEnd = p;
+        while(mimeEnd<fb.length && fb[mimeEnd]!==0) mimeEnd++;
+        const mime = new TextDecoder('iso-8859-1').decode(fb.subarray(p,mimeEnd)) || 'image/jpeg';
+        p = mimeEnd+1+1; // skip mime terminator + 1-byte picture type
+        p = findId3Terminator(fb, p, enc);
+        if(p < fb.length){
+          result.pictureBlob = new Blob([fb.subarray(p)], {type: mime});
+          result.pictureMime = mime;
         }
       }
+      offset = dataStart + frameSize;
+    }
+    return result;
+  }
+
+  function tryParseId3ForCoverAndLyrics(bytes){
+    const r = parseId3v2(bytes);
+    return r;
+  }
+
+  // ---------- Audio metadata parsing (WAV / FLAC headers) ----------
+  async function parseWav(file){
+    const result = {channels:null, sampleRate:null, bitDepth:null, bitrateKbps:null, title:null, artist:null, album:null, lyrics:null, pictureBlob:null, pictureMime:null};
+    const headBuf = await file.slice(0,12).arrayBuffer();
+    const headBytes = new Uint8Array(headBuf);
+    if(headBytes.length<12) return result;
+    if(String.fromCharCode(headBytes[0],headBytes[1],headBytes[2],headBytes[3]) !== 'RIFF') return result;
+    let offset = 12;
+    const fileSize = file.size;
+    let guard = 0;
+    while(offset+8 <= fileSize && guard < 200){
+      guard++;
+      const hdrBuf = await file.slice(offset, offset+8).arrayBuffer();
+      const hdrBytes = new Uint8Array(hdrBuf);
+      const hdrView = new DataView(hdrBuf);
+      const chunkId = String.fromCharCode(hdrBytes[0],hdrBytes[1],hdrBytes[2],hdrBytes[3]);
+      const chunkSize = hdrView.getUint32(4, true);
+      const dataStart = offset+8;
+      const idLower = chunkId.toLowerCase();
+      const safeEnd = Math.min(dataStart+chunkSize, fileSize);
+
+      if(idLower === 'fmt ' && chunkSize>=16){
+        const b = await file.slice(dataStart, safeEnd).arrayBuffer();
+        const v = new DataView(b);
+        if(v.byteLength>=16){
+          result.channels = v.getUint16(2, true);
+          result.sampleRate = v.getUint32(4, true);
+          const byteRate = v.getUint32(8, true);
+          result.bitDepth = v.getUint16(14, true);
+          result.bitrateKbps = Math.round(byteRate*8/1000);
+        }
+      } else if(idLower === 'list' && chunkSize>4){
+        const b = await file.slice(dataStart, safeEnd).arrayBuffer();
+        const bytes = new Uint8Array(b);
+        const listType = String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3]);
+        if(listType.toUpperCase()==='INFO'){
+          let p = 4;
+          while(p+8<=bytes.length){
+            const subId = String.fromCharCode(bytes[p],bytes[p+1],bytes[p+2],bytes[p+3]);
+            const subSize = new DataView(b, p+4, 4).getUint32(0, true);
+            const strStart = p+8;
+            if(strStart+subSize<=bytes.length){
+              const str = new TextDecoder('utf-8').decode(bytes.subarray(strStart, strStart+subSize)).replace(/\0+$/,'').trim();
+              if(subId==='INAM') result.title = str;
+              if(subId==='IART') result.artist = str;
+              if(subId==='IPRD') result.album = str;
+            }
+            p += 8+subSize+(subSize%2);
+          }
+        }
+      } else if((idLower === 'id3 ' || idLower === 'id3\0') && chunkSize>10){
+        const b = await file.slice(dataStart, safeEnd).arrayBuffer();
+        const id3 = tryParseId3ForCoverAndLyrics(new Uint8Array(b));
+        if(id3.title) result.title = id3.title;
+        if(id3.artist) result.artist = id3.artist;
+        if(id3.album) result.album = id3.album;
+        if(id3.lyrics) result.lyrics = id3.lyrics;
+        if(id3.pictureBlob){ result.pictureBlob = id3.pictureBlob; result.pictureMime = id3.pictureMime; }
+      }
+      // 'data' and any other chunk: skip without reading payload into memory
       offset = dataStart + chunkSize + (chunkSize % 2);
+      if(chunkSize <= 0) break;
     }
     return result;
   }
 
   async function parseFlac(file){
-    const result = {channels:null, sampleRate:null, bitDepth:null, bitrateKbps:null, title:null, artist:null, album:null};
-    const buf = await file.slice(0, Math.min(file.size, 2*1024*1024)).arrayBuffer();
+    const result = {channels:null, sampleRate:null, bitDepth:null, bitrateKbps:null, title:null, artist:null, album:null, lyrics:null, pictureBlob:null, pictureMime:null};
+    const buf = await file.slice(0, Math.min(file.size, 12*1024*1024)).arrayBuffer();
     const bytes = new Uint8Array(buf);
     const view = new DataView(buf);
     if(bytes.length < 4 || String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3]) !== 'fLaC') return result;
@@ -662,8 +853,24 @@
                 if(key === 'TITLE') result.title = val;
                 else if(key === 'ARTIST') result.artist = val;
                 else if(key === 'ALBUM') result.album = val;
+                else if(key === 'LYRICS' || key === 'UNSYNCEDLYRICS' || key === 'SYNCEDLYRICS' || key === 'LYRICS-XXX') result.lyrics = val;
               }
             }
+          }
+        }
+      } else if(blockType === 6){ // PICTURE
+        let p = blockStart;
+        if(p+32 <= bytes.length){
+          p += 4; // picture type, not needed
+          const mimeLen = view.getUint32(p, false); p += 4;
+          const mime = new TextDecoder('iso-8859-1').decode(bytes.subarray(p, p+mimeLen)) || 'image/jpeg'; p += mimeLen;
+          const descLen = view.getUint32(p, false); p += 4;
+          p += descLen; // skip description
+          p += 4+4+4+4; // width, height, colorDepth, numColors
+          const picDataLen = view.getUint32(p, false); p += 4;
+          if(p+picDataLen <= bytes.length){
+            result.pictureBlob = new Blob([bytes.subarray(p, p+picDataLen)], {type: mime});
+            result.pictureMime = mime;
           }
         }
       }
@@ -731,7 +938,6 @@
     renderTrackList();
     if(index === currentIndex){
       applyBackground(t);
-      trackMetaEl.textContent = t.ext + ' · Video BG aktif';
       updateNowPlayingMini(t);
     }
   }
@@ -771,10 +977,10 @@
       const li = document.createElement('li');
       li.className = 'trackRow' + (i===currentIndex ? ' active' : '');
       li.innerHTML = `
-        <div class="thumb">${t.videoURL ? `<video muted loop autoplay playsinline src="${t.videoURL}"></video>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`}</div>
+        <div class="thumb">${thumbInnerHTML(t)}</div>
         <div class="trackInfo">
           <div class="name">${escapeHtml(t.name)}</div>
-          <div class="sub"><span>${t.ext}</span>${t.videoURL ? '<span class="vidTag">● VIDEO BG</span>' : ''}</div>
+          <div class="sub"><span>${t.ext}</span></div>
         </div>
         <div class="rowActions">
           <button class="rowBtn" data-action="video" data-index="${i}" aria-label="Ganti video">
@@ -809,18 +1015,37 @@
     return d.innerHTML;
   }
 
+  const MUSIC_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+  const FILM_BADGE_SVG = '<span class="thumbVidBadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="3"></rect><line x1="2" y1="9" x2="22" y2="9"></line></svg></span>';
+
+  // Cover art (from embedded metadata) takes priority in the thumbnail slot;
+  // falls back to a live video-bg preview, then a generic note icon.
+  function thumbInnerHTML(track){
+    let inner;
+    if(track.coverArtURL) inner = `<img src="${track.coverArtURL}" alt="cover">`;
+    else if(track.videoURL) inner = `<video muted loop autoplay playsinline src="${track.videoURL}"></video>`;
+    else inner = MUSIC_ICON_SVG;
+    if(track.coverArtURL && track.videoURL) inner += FILM_BADGE_SVG;
+    return inner;
+  }
+
   // ---------- Now playing mini card ----------
   function updateNowPlayingMini(track){
     nowPlayingMini.classList.remove('hidden');
-    npmTitle.textContent = track.name;
-    npmSub.textContent = track.ext + (track.videoURL ? ' · Video BG' : '');
-    npmThumb.innerHTML = track.videoURL
-      ? `<video muted loop autoplay playsinline src="${track.videoURL}"></video>`
-      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
+    npmTitle.textContent = (track.meta && track.meta.title) || track.name;
+    npmSub.textContent = (track.meta && track.meta.artist) || track.ext;
+    npmThumb.innerHTML = thumbInnerHTML(track);
   }
 
   // ---------- Track properties panel ----------
   function applyMeta(track, meta){
+    // cover art + thumbnails can refresh even if the user has since switched
+    // tracks (so the library/mini-card still gets the art once it's ready)
+    if(meta.pictureBlob && !track.coverArtURL){
+      track.coverArtURL = URL.createObjectURL(meta.pictureBlob);
+      renderTrackList();
+      if(tracks[currentIndex] === track) updateNowPlayingMini(track);
+    }
     if(tracks[currentIndex] !== track) return;
     infoTitle.textContent = meta.title || track.name;
     infoArtist.textContent = meta.artist || '—';
@@ -833,6 +1058,50 @@
       bitrate = Math.round((track.audioFile.size*8)/audioEl.duration/1000);
     }
     infoBitrate.textContent = bitrate ? bitrate + ' kbps' : '—';
+    updateNowPlayingMini(track);
+    renderLyricsPanel(track);
+  }
+
+  // ---------- Lyrics panel ----------
+  function renderLyricsPanel(track){
+    lastActiveLyricIndex = -1;
+    const lyricsText = track.meta && track.meta.lyrics;
+    if(!lyricsText || !lyricsText.trim()){
+      lrcData = null;
+      lyricsBody.innerHTML = track.meta
+        ? '<p class="lyricsEmpty">Lirik ga ketemu di metadata file ini.</p>'
+        : '<p class="lyricsEmpty">Lagi baca metadata…</p>';
+      return;
+    }
+    const parsed = parseLrc(lyricsText);
+    if(parsed.hasTimestamps){
+      lrcData = parsed;
+      lyricsBody.innerHTML = parsed.lines.map((l,i) => `<div class="lyricLine" data-index="${i}">${escapeHtml(l.text) || '&nbsp;'}</div>`).join('');
+    } else {
+      lrcData = null;
+      lyricsBody.innerHTML = `<div class="lyricsPlain">${escapeHtml(lyricsText)}</div>`;
+    }
+  }
+
+  function updateActiveLyricLine(){
+    if(!lrcData || !lrcData.lines.length) return;
+    const t = audioEl.currentTime;
+    let idx = -1;
+    for(let i=0;i<lrcData.lines.length;i++){
+      if(lrcData.lines[i].time <= t) idx = i; else break;
+    }
+    if(idx === lastActiveLyricIndex) return;
+    lastActiveLyricIndex = idx;
+    lyricsBody.querySelectorAll('.lyricLine').forEach(el => el.classList.remove('active','near'));
+    if(idx >= 0){
+      const activeEl = lyricsBody.querySelector(`.lyricLine[data-index="${idx}"]`);
+      if(activeEl){
+        activeEl.classList.add('active');
+        if(activeEl.previousElementSibling) activeEl.previousElementSibling.classList.add('near');
+        if(activeEl.nextElementSibling) activeEl.nextElementSibling.classList.add('near');
+        activeEl.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    }
   }
 
   async function updateInfoPanel(track){
@@ -865,12 +1134,15 @@
     if(!t) return;
     if(t.audioURL) URL.revokeObjectURL(t.audioURL);
     if(t.videoURL) URL.revokeObjectURL(t.videoURL);
+    if(t.coverArtURL) URL.revokeObjectURL(t.coverArtURL);
     tracks.splice(index, 1);
     if(index === currentIndex){
       audioEl.pause(); audioEl.removeAttribute('src');
       isPlaying = false; currentIndex = -1;
       applyBackground(null);
       updatePlayUI();
+      lrcData = null; lastActiveLyricIndex = -1;
+      lyricsBody.innerHTML = '<p class="lyricsEmpty">Belum ada lagu yang dipilih.</p>';
     } else if(index < currentIndex){
       currentIndex--;
     }
@@ -894,11 +1166,12 @@
     const t = tracks[index];
     audioEl.src = t.audioURL;
     trackTitleEl.textContent = t.name;
-    trackMetaEl.textContent = t.ext + (t.videoURL ? ' · Video BG aktif' : ' · Belum ada video BG');
+    trackMetaEl.textContent = t.ext;
     applyBackground(t);
     renderTrackList();
     updateNowPlayingMini(t);
     updateInfoPanel(t);
+    renderLyricsPanel(t);
     if(autoplay){
       audioEl.play().catch(()=>{});
     } else {
@@ -982,6 +1255,18 @@
   audioEl.addEventListener('play', () => { bgVideo.play().catch(()=>{}); updatePlayUI(); });
   audioEl.addEventListener('pause', () => { bgVideo.pause(); updatePlayUI(); });
 
+  // Browsers throttle/pause background-tab <video> to save resources while
+  // <audio> keeps playing uninterrupted — that's what causes the video to
+  // drift out of sync after switching tabs/windows. Snap it back on return.
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible'){
+      syncVideoPositionToAudio();
+      if(!audioEl.paused && bgVideo.src){
+        bgVideo.play().catch(()=>{});
+      }
+    }
+  });
+
   // Whenever the audio's position jumps (user drag, repeat-one restart,
   // prev-track restart), reposition the video to match — this is also what
   // resets a too-long video back to frame 0 when a track loops/restarts.
@@ -1002,6 +1287,7 @@
     seek.value = pct;
     seek.style.setProperty('--pct', pct + '%');
     timeCurrent.textContent = formatTimecode(audioEl.currentTime);
+    updateActiveLyricLine();
   });
   audioEl.addEventListener('loadedmetadata', () => {
     timeTotal.textContent = formatTimecode(audioEl.duration);
@@ -1062,6 +1348,12 @@
   });
   document.getElementById('panelCloseBtn').addEventListener('click', () => {
     playlistPanel.classList.remove('open');
+  });
+  document.getElementById('lyricsToggle').addEventListener('click', () => {
+    lyricsPanel.classList.toggle('open');
+  });
+  document.getElementById('lyricsCloseBtn').addEventListener('click', () => {
+    lyricsPanel.classList.remove('open');
   });
   document.getElementById('infoToggleBtn').addEventListener('click', () => {
     infoPanel.classList.toggle('hidden');
